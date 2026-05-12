@@ -1,5 +1,6 @@
 <?php
 
+use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
 
 class SkinLiberty extends SkinTemplate {
@@ -16,10 +17,11 @@ class SkinLiberty extends SkinTemplate {
 	 */
 	public function initPage( OutputPage $out ) {
 		// @codingStandardsIgnoreLine
-		global $wgSitename, $wgTwitterAccount, $wgLanguageCode, $wgNaverVerification, $wgLogo, $wgLibertyEnableLiveRC, $wgLibertyAdSetting, $wgLibertyAdGroup, $wgLibertyNavBarLogoImage;
+		global $wgSitename, $wgTwitterAccount, $wgLanguageCode, $wgNaverVerification, $wgLibertyEnableLiveRC, $wgLibertyAdSetting, $wgLibertyAdGroup, $wgLibertyNavBarLogoImage;
 
 		$user = $this->getUser();
 		$services = MediaWikiServices::getInstance();
+		$config = $services->getMainConfig();
 		$userOptionsLookup = $services->getUserOptionsLookup();
 		/* uncomment if needs to use UserGroupManager
 		$userGroupManager = $services->getUserGroupManager();
@@ -33,9 +35,15 @@ class SkinLiberty extends SkinTemplate {
 		// @codingStandardsIgnoreLine
 		$tempSecondColor = isset( $GLOBALS['wgLibertySecondColor'] ) ? $GLOBALS['wgLibertySecondColor'] : '#' . strtoupper( dechex( hexdec( substr( $mainColor, 1, 6 ) ) - hexdec( '1A1415' ) ) );
 		$secondColor = $optionSecondColor ? $optionSecondColor : $tempSecondColor;
-		$ogLogo = isset( $GLOBALS['wgLibertyOgLogo'] ) ? $GLOBALS['wgLibertyOgLogo'] : $wgLogo;
-		if ( !preg_match( '/^((?:(?:http(?:s)?)?:)?\/\/(?:.{4,}))$/i', $ogLogo ) ) {
-			$ogLogo = $GLOBALS['wgServer'] . $GLOBALS['wgLogo'];
+		$configLogos = $config->get( MainConfigNames::Logos );
+		$configLogo = is_array( $configLogos ) && isset( $configLogos['1x'] )
+			? $configLogos['1x']
+			: $config->get( MainConfigNames::Logo );
+		$ogLogo = isset( $GLOBALS['wgLibertyOgLogo'] ) && $GLOBALS['wgLibertyOgLogo'] !== ''
+			? $GLOBALS['wgLibertyOgLogo']
+			: $configLogo;
+		if ( !preg_match( '/^((?:(?:http(?:s)?)?:)?\/\/(?:.{4,}))$/i', (string)$ogLogo ) ) {
+			$ogLogo = $GLOBALS['wgServer'] . $configLogo;
 		}
 
 		$skin = $this->getSkin();
@@ -147,14 +155,17 @@ class SkinLiberty extends SkinTemplate {
 		);
 
 		// navbar image settings
-		if ( isset( $wgLibertyNavBarLogoImage ) ) {
+		$navBarLogoImage = isset( $wgLibertyNavBarLogoImage ) && $wgLibertyNavBarLogoImage !== ''
+			? $wgLibertyNavBarLogoImage
+			: $configLogo;
+		if ( is_string( $navBarLogoImage ) && $navBarLogoImage !== '' ) {
 			$out->addInlineStyle(
 				".Liberty .nav-wrapper .navbar .navbar-brand {
-					background: transparent url($wgLibertyNavBarLogoImage) no-repeat scroll left center/auto 1.9rem;
+					background: transparent url($navBarLogoImage) no-repeat scroll left center/auto 1.9rem;
 				}
 				@media screen and (max-width: 397px){
 					.Liberty .nav-wrapper .navbar .navbar-brand {
-						background: transparent url($wgLibertyNavBarLogoImage) no-repeat scroll left center/auto 1.5rem;
+						background: transparent url($navBarLogoImage) no-repeat scroll left center/auto 1.5rem;
 					}
 				}"
 			);
@@ -162,6 +173,9 @@ class SkinLiberty extends SkinTemplate {
 
 		// layout settings
 		$LibertyUserWidthSettings = $userOptionsLookup->getOption( $user, 'liberty-layout-width' );
+		if ( $LibertyUserWidthSettings === null ) {
+			$LibertyUserWidthSettings = '1500px';
+		}
 		$LibertyUserSidebarSettings = $userOptionsLookup->getOption( $user, 'liberty-layout-sidebar' );
 		$LibertyUserNavbarSettings = $userOptionsLookup->getOption( $user, 'liberty-layout-navfix' );
 		$LibertyUsercontrolbarSettings = $userOptionsLookup->getOption( $user, 'liberty-layout-controlbar' );
@@ -241,41 +255,6 @@ class SkinLiberty extends SkinTemplate {
 					$wgLibertyAdSetting['belowarticle'] = null;
 				}
 			}
-		}
-
-		$LibertyDarkCss = "body, .Liberty, .dropdown-menu, .dropdown-item, .Liberty .nav-wrapper .navbar .form-inline .btn, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-header .nav .nav-item .nav-link.active, .Liberty .content-wrapper .liberty-content .liberty-content-main table.wikitable tr > th, .Liberty .content-wrapper .liberty-content .liberty-content-main table.wikitable tr > td, table.mw_metadata th, .Liberty .content-wrapper .liberty-content .liberty-content-main table.infobox th, #preferences fieldset:not(.prefsection), #preferences div.mw-prefs-buttons, .navbox, .navbox-subgroup, .navbox > tbody > tr:nth-child(even) > .navbox-list {
-			background-color: #000;
-			color: #DDD;
-		}
-
-		.liberty-content-header, .liberty-footer, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-footer, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-header .nav .nav-item, .Liberty .content-wrapper .liberty-content .liberty-content-header, .Liberty .content-wrapper .liberty-footer, .editOptions, html .wikiEditor-ui-toolbar, #pagehistory li.selected, .mw-datatable td, .Liberty .content-wrapper .liberty-content .liberty-content-main table.wikitable tr > td, table.mw_metadata td, .Liberty .content-wrapper .liberty-content .liberty-content-main table.wikitable, .Liberty .content-wrapper .liberty-content .liberty-content-main table.infobox, #preferences, .navbox-list, .dropdown-divider {
-			background-color: #1F2023;
-			color: #DDD;
-		}
-
-		.Liberty .content-wrapper .liberty-content .liberty-content-main, .mw-datatable th, .mw-datatable tr:hover td, textarea, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-content, div.mw-warning-with-logexcerpt, div.mw-lag-warn-high, div.mw-cascadeprotectedwarning, div#mw-protect-cascadeon {
-			background-color: #000;
-		}
-
-		.Liberty .content-wrapper .liberty-content .liberty-content-header .title>h1, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-content .live-recent-list .recent-item, caption { color: #DDD; }
-
-		.btn-secondary { background: transparent; color: #DDD; }
-
-		#pagehistory li { border: 0; }
-
-		.Liberty .content-wrapper .liberty-footer, .Liberty .content-wrapper .liberty-content .liberty-content-header, .Liberty .content-wrapper .liberty-content .liberty-content-main, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-footer, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-content, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-header .nav .nav-item, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-header .nav .nav-item + .nav-item, .Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .tools-btn:hover, .Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .tools-btn:focus, .Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .tools-btn, .dropdown-menu, .dropdown-divider, .Liberty .content-wrapper .liberty-content .liberty-content-main fieldset, hr, .Liberty .content-wrapper .liberty-sidebar .live-recent-wrapper .live-recent .live-recent-content .live-recent-list li, .mw-changeslist-legend, .Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools { border-color: #555; }
-
-		.flow-post, .Liberty .content-wrapper .liberty-content .liberty-content-main .toc .toctext { color: #DDD; }
-		.flow-topic-titlebar { color: #000; }
-		.flow-ui-navigationWidget { color: #FFF; }
-		.Liberty .content-wrapper .liberty-content .liberty-content-main .toccolours, .Liberty .content-wrapper .liberty-content .liberty-content-main .toc ul, .Liberty .content-wrapper .liberty-content .liberty-content-main .toc li { background-color: #000; }
-		.Liberty .content-wrapper .liberty-content .liberty-content-main .toc .toctitle { background-color: #1F2023; }";
-
-		$LibertyUserDarkSetting = $userOptionsLookup->getOption( $user, 'liberty-dark' );
-		if ( $LibertyUserDarkSetting === 'dark' ) {
-			$out->addInlineStyle( $LibertyDarkCss );
-		} elseif ( $LibertyUserDarkSetting === null ) {
-			$out->addInlineStyle( "@media (prefers-color-scheme: dark) { $LibertyDarkCss }" );
 		}
 
 		// @codingStandardsIgnoreEnd

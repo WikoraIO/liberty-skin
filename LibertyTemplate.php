@@ -6,6 +6,7 @@ use MediaWiki\MediaWikiServices;
 use MediaWiki\Permissions\RestrictionStore;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\Title;
+use Telepedia\UserProfileV2\Avatar\UserProfileV2Avatar;
 
 class LibertyTemplate extends BaseTemplate {
 	/**
@@ -199,8 +200,6 @@ class LibertyTemplate extends BaseTemplate {
 	 * Login box function, build top menu's login button.
 	 */
 	protected function loginBox() {
-		global $wgLibertyUseGravatar;
-
 		$skin = $this->getSkin();
 		$user = $skin->getUser();
 		$linkRenderer = MediaWikiServices::getInstance()->getLinkRenderer();
@@ -210,30 +209,12 @@ class LibertyTemplate extends BaseTemplate {
 			// If the user is logged in...
 			if ( $user->isRegistered() ) {
 				$personalTools = $this->getPersonalTools();
-				// ...and Gravatar is enabled in site config...
-				if ( $wgLibertyUseGravatar ) {
-					// ...and the user has a confirmed email...
-					if ( $user->getEmailAuthenticationTimestamp() ) {
-						// ...then, and only then, build the correct Gravatar URL
-						$email = trim( $user->getEmail() );
-						$email = strtolower( $email );
-						$email = md5( $email ) . '?d=identicon';
-					} else {
-						$email = '00000000000000000000000000000000?d=identicon&f=y';
-					}
+				$avatar = '';
+				if ( class_exists( UserProfileV2Avatar::class ) ) {
+					$userProfileV2Avatar = new UserProfileV2Avatar( $user->getId() );
 					$avatar = Html::element( 'img', [
 						'class' => 'profile-img',
-						'src' => '//secure.gravatar.com/avatar/' . $email
-					] );
-				} else {
-					$avatar = '';
-				}
-
-				// SocialProfile support
-				if ( class_exists( 'wAvatar' ) ) {
-					$avatar = new wAvatar( $user->getId(), 'm' );
-					$avatar = $avatar->getAvatarURL( [
-						'class' => 'profile-img'
+						'src' => $userProfileV2Avatar->getAvatarUrl( [ 'raw' => true ] )
 					] );
 				}
 			?>
@@ -325,18 +306,19 @@ class LibertyTemplate extends BaseTemplate {
 							<?php echo $skin->msg( 'logout' )->escaped(); ?></a>
 					</div>
 				</div>
-				<a href="<?php echo $personalTools['logout']['links'][0]['href']; ?>"
-					class="hide-logout logout-btn" 
-					title="<?php
-					// @codingStandardsIgnoreStart
-					echo htmlspecialchars( Linker::titleAttrib( 'pt-logout', 'withaccess' ), ENT_QUOTES );
-					// @codingStandardsIgnoreEnd
-					?>">
-					<span class="fa fa-sign-out"></span></a>
-			<?php } else { ?>
-				<a href="#" class="none-outline" data-toggle="modal" data-target="#login-modal">
-					<span class="fa fa-sign-in"></span>
-				</a>
+				<?php
+				if ( isset( $personalTools['wikoracontrol-discussions']['links'][0]['href'] ) ) {
+					$discussionLink = $personalTools['wikoracontrol-discussions']['links'][0];
+					?>
+					<a href="<?php echo htmlspecialchars( $discussionLink['href'], ENT_QUOTES ); ?>"
+						class="none-outline discussions-btn"
+						id="pt-discussions"
+						title="<?php echo htmlspecialchars( $discussionLink['title'] ?? 'Visit the discussions forum', ENT_QUOTES ); ?>">
+						<span class="fa fa-comments"></span>
+					</a>
+					<?php
+				}
+				?>
 			<?php } ?>
 		</div>
 	<?php
@@ -422,7 +404,9 @@ class LibertyTemplate extends BaseTemplate {
 		global $wgLibertyEnableLiveRC,
 			$wgLibertyMaxRecent,
 			$wgLibertyLiveRCArticleNamespaces,
-			$wgLibertyLiveRCTalkNamespaces;
+			$wgLibertyLiveRCTalkNamespaces,
+			$wgLibertyRecentDiscussionsFeedFormat,
+			$wgLibertyLiveRCRSSTalkNamespace;
 
 		// Don't bother outputting this if the live RC feature is disabled in
 		// site configuration
@@ -434,9 +418,25 @@ class LibertyTemplate extends BaseTemplate {
 		$linkRenderer = MediaWikiServices::getInstance()->getLinkRenderer();
 		$articleNS = implode( '|', $wgLibertyLiveRCArticleNamespaces );
 		$talkNS = implode( '|', $wgLibertyLiveRCTalkNamespaces );
+		$talkFeedFormat = in_array( strtolower( (string)$wgLibertyRecentDiscussionsFeedFormat ), [ 'rss', 'atom' ], true )
+			? strtolower( (string)$wgLibertyRecentDiscussionsFeedFormat )
+			: 'rss';
+		// Use API endpoint which reads from Wikoracontrol and validates wikora.io domain
+		$talkRssUrl = wfScript( 'api' ) . '?action=libertyrecentdiscussionsfeed&format=json';
+		$fallbackTalkRssUrl = SpecialPage::getTitleFor( 'Recentchanges' )->getLocalURL( [
+			'feed' => $talkFeedFormat,
+			'namespace' => $wgLibertyLiveRCRSSTalkNamespace
+		] );
+		$articleRecentChangesUrl = SpecialPage::getTitleFor( 'Recentchanges' )->getLocalURL();
+		$talkRecentChangesUrl = SpecialPage::getTitleFor( 'Recentchanges' )->getLocalURL( [
+			'namespace' => $wgLibertyLiveRCRSSTalkNamespace
+		] );
 	?>
 		<div class="live-recent" data-article-ns="<?php echo $articleNS ?>" 
-			data-talk-ns="<?php echo $talkNS ?>">
+			data-talk-ns="<?php echo $talkNS ?>"
+			data-talk-rss-url="<?php echo htmlspecialchars( $talkRssUrl ); ?>"
+			data-article-recentchanges-url="<?php echo htmlspecialchars( $articleRecentChangesUrl ); ?>"
+			data-talk-recentchanges-url="<?php echo htmlspecialchars( $talkRecentChangesUrl ); ?>">
 			<div class="live-recent-header">
 				<ul class="nav nav-tabs">
 					<li class="nav-item">

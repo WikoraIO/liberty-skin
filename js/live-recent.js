@@ -1,11 +1,24 @@
 $( function () {
 	'use strict';
-	var articleNamespaces, talkNamespaces, isArticleTab, limit;
+	var articleNamespaces, talkNamespaces, talkRssUrl, articleRecentChangesUrl, talkRecentChangesUrl,
+		isArticleTab, limit;
 
 	articleNamespaces = $( '.live-recent' ).attr( 'data-article-ns' );
 	talkNamespaces = $( '.live-recent' ).attr( 'data-talk-ns' );
+	talkRssUrl = $( '.live-recent' ).attr( 'data-talk-rss-url' );
+	articleRecentChangesUrl = $( '.live-recent' ).attr( 'data-article-recentchanges-url' );
+	talkRecentChangesUrl = $( '.live-recent' ).attr( 'data-talk-recentchanges-url' );
 	isArticleTab = true;
 	limit = $( '#live-recent-list' )[ 0 ].childElementCount;
+
+	function escapeHtml( text ) {
+		return $( '<div>' ).text( text || '' ).html();
+	}
+
+	function setViewMoreUrl() {
+		var url = isArticleTab ? articleRecentChangesUrl : talkRecentChangesUrl;
+		$( '.live-recent-footer a' ).attr( 'href', url );
+	}
 
 	function timeFormat( time ) {
 		var aDayAgo, hour, minute, second;
@@ -29,12 +42,33 @@ $( function () {
 		return hour + ':' + minute + ':' + second;
 	}
 
-	function refreshLiveRecent() {
-		var getParameter;
+	function renderRecentChanges( recentChanges ) {
+		var html;
+		html = recentChanges.map( function ( item ) {
+			var displayText, escapedDisplayText, safeTitle, title, time, line, itemUrl;
+			title = item.title || '';
+			safeTitle = escapeHtml( title );
+			time = new Date( item.timestamp );
+			itemUrl = item.url || mw.util.getUrl( title );
+			line = '<li><a class="recent-item" href="' + itemUrl + '" title="' + safeTitle + '">[' +
+				timeFormat( time ) + '] ';
+			displayText = title;
+			if ( displayText.length > 13 ) {
+				displayText = displayText.substr( 0, 13 ) + '...';
+			}
+			escapedDisplayText = escapeHtml( displayText );
+			if ( item.type === 'new' ) {
+				line += '<span class="new">' + mw.message( 'liberty-feed-new' ).escaped() + ' </span>';
+			}
+			line += escapedDisplayText;
+			line += '</a></li>';
+			return line;
+		} ).join( '\n' );
+		$( '#live-recent-list' ).html( html );
+	}
 
-		if ( !$( '#live-recent-list' ).length || $( '#live-recent-list' ).is( ':hidden' ) ) {
-			return;
-		}
+	function refreshFromRecentChangesApi() {
+		var getParameter;
 
 		getParameter = {
 			action: 'query',
@@ -51,29 +85,41 @@ $( function () {
 		mw.loader.using( 'mediawiki.api' ).then( function () {
 			var api = new mw.Api();
 			api.get( getParameter ).then( function ( data ) {
-				var recentChanges, html, time, line, text;
-				recentChanges = data.query.recentchanges;
-				html = recentChanges.map( function ( item ) {
-					time = new Date( item.timestamp );
-					line = '<li><a class="recent-item" href="' + mw.util.getUrl( item.title ) + '" title="' + item.title + '">[' + timeFormat( time ) + '] ';
-					text = '';
-					if ( item.type === 'new' ) {
-						text += '[New]';
-					}
-					text += item.title;
-					if ( text.length > 13 ) {
-						text = text.substr( 0, 13 );
-						text += '...';
-					}
-					text = text.replace( '[New]', '<span class="new">' + mw.message( 'liberty-feed-new' ).escaped() + ' </span>' );
-					line += text;
-					line += '</a></li>';
-					return line;
-				} ).join( '\n' );
-				$( '#live-recent-list' ).html( html );
+				renderRecentChanges( data.query.recentchanges || [] );
 			} )
 			.catch( function () {} );
-		});
+		} );
+	}
+
+	function refreshFromTalkRss() {
+		return mw.loader.using( 'mediawiki.api' ).then( function () {
+			var api = new mw.Api();
+			return api.get( {
+				action: 'libertyrecentdiscussionsfeed',
+				format: 'json'
+			} ).then( function ( data ) {
+				var items = ( data.libertyrecentdiscussionsfeed && data.libertyrecentdiscussionsfeed.items ) || [];
+				renderRecentChanges( items );
+			} );
+		} );
+	}
+
+	function refreshLiveRecent() {
+
+		if ( !$( '#live-recent-list' ).length || $( '#live-recent-list' ).is( ':hidden' ) ) {
+			return;
+		}
+
+		setViewMoreUrl();
+
+		if ( !isArticleTab && talkRssUrl ) {
+			refreshFromTalkRss().catch( function () {
+				refreshFromRecentChangesApi();
+			} );
+			return;
+		}
+
+		refreshFromRecentChangesApi();
 	}
 
 	$( '#liberty-recent-tab1' ).click( function () {
