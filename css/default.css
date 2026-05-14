@@ -318,6 +318,12 @@ strike {
 	display: inline-block;
 }
 
+.Liberty .nav-wrapper .navbar .navbar-login .createaccount-btn,
+.Liberty .nav-wrapper .navbar .navbar-login .login-btn {
+	margin-left: 0.8rem;
+	display: inline-block;
+}
+
 .Liberty .nav-wrapper .navbar .navbar-login .login-dropdown-menu {
 	top: 120%;
 	right: -1rem;

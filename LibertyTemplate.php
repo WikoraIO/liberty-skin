@@ -320,6 +320,28 @@ class LibertyTemplate extends BaseTemplate {
 				}
 				?>
 			<?php } ?>
+			<?php if ( !$user->isRegistered() ) { ?>
+				<?php
+				echo Html::rawElement(
+					'a',
+					[
+						'href' => SpecialPage::getTitleFor( 'Userlogin' )->getLocalURL( [
+							'type' => 'signup',
+							'returnto' => $skin->getTitle()->getPrefixedText(),
+						] ),
+						'class' => 'none-outline createaccount-btn',
+						'id' => 'pt-createaccount',
+						'title' => Linker::titleAttrib( 'pt-createaccount', 'withaccess' ),
+						'accesskey' => Linker::accesskey( 'pt-createaccount' )
+					],
+					Html::element( 'span', [ 'class' => 'fa fa-user-plus' ] )
+				);
+				?>
+				<a href="#" class="none-outline login-btn" data-toggle="modal" data-target="#login-modal"
+					title="<?php echo htmlspecialchars( Linker::titleAttrib( 'pt-login', 'withaccess' ), ENT_QUOTES ); ?>">
+					<span class="fa fa-sign-in"></span>
+				</a>
+			<?php } ?>
 		</div>
 	<?php
 	}
