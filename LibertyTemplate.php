@@ -34,6 +34,9 @@ class LibertyTemplate extends BaseTemplate {
 				<?php if ( $LibertyUserSidebarSettings == false ) { ?>
 					<aside>
 						<div class="liberty-sidebar">
+							<div class="mw-sidebar-wrapper">
+								<?php $this->sidebarPortals(); ?>
+							</div>
 							<div class="live-recent-wrapper">
 								<?php $this->liveRecent(); ?>
 							</div>
@@ -171,7 +174,7 @@ class LibertyTemplate extends BaseTemplate {
 	}
 
 	/**
-	 * Search box function, build top menu's search box.
+													<?php $this->sidebarPortals( false ); ?>
 	 */
 	protected function searchBox() {
 		$skin = $this->getSkin();
@@ -304,6 +307,10 @@ class LibertyTemplate extends BaseTemplate {
 							// @codingStandardsIgnoreEnd
 							?>">
 							<?php echo $skin->msg( 'logout' )->escaped(); ?></a>
+						<div class="mobile-sidebar-portals">
+							<div class="dropdown-divider"></div>
+							<?php $this->sidebarPortals( true ); ?>
+						</div>
 					</div>
 				</div>
 				<?php
@@ -491,6 +498,91 @@ class LibertyTemplate extends BaseTemplate {
 			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render MediaWiki sidebar portals in Liberty's right sidebar.
+	 */
+	protected function sidebarPortals( $mobile = false ) {
+		$sidebar = $this->getSidebar( [
+			'search' => false,
+			'languages' => false,
+		] );
+
+		foreach ( $sidebar as $boxName => $box ) {
+			if ( strtoupper( (string)$boxName ) === 'NAVIGATION' ) {
+				continue;
+			}
+			if ( !isset( $box['content'] ) || !is_array( $box['content'] ) || !$box['content'] ) {
+				continue;
+			}
+
+			if ( $mobile ) {
+				?>
+				<div class="mobile-sidebar-portlet" id="<?php echo htmlspecialchars( $box['id'] ); ?>">
+					<div class="dropdown-header sidebar-portlet-header">
+						<?php echo htmlspecialchars( (string)$box['header'] ); ?>
+					</div>
+					<ul class="sidebar-portlet-list">
+						<?php
+						$hiddenIds = [ 't-print', 't-permalink', 't-whatlinkshere', 't-recentchangeslinked', 't-info', 't-contributions' ];
+						foreach ( $box['content'] as $key => $item ) {
+							if ( isset( $item['links'] ) && is_array( $item['links'] ) ) {
+								foreach ( $item['links'] as $childKey => $childItem ) {
+									$childId = $childItem['id'] ?? '';
+									if ( in_array( $childId, $hiddenIds, true ) ) {
+										continue;
+									}
+									echo $this->makeListItem( $childKey, $childItem );
+								}
+								continue;
+							}
+
+							$itemId = $item['id'] ?? '';
+							if ( in_array( $itemId, $hiddenIds, true ) ) {
+								continue;
+							}
+
+							echo $this->makeListItem( $key, $item );
+						}
+						?>
+					</ul>
+				</div>
+				<?php
+				continue;
+			}
+			?>
+			<div class="sidebar-portlet" id="<?php echo htmlspecialchars( $box['id'] ); ?>">
+				<div class="sidebar-portlet-header">
+					<?php echo htmlspecialchars( (string)$box['header'] ); ?>
+				</div>
+				<ul class="sidebar-portlet-list">
+					<?php
+					$hiddenIds = [ 't-print', 't-permalink', 't-whatlinkshere', 't-recentchangeslinked', 't-info', 't-contributions' ];
+					foreach ( $box['content'] as $key => $item ) {
+						if ( isset( $item['links'] ) && is_array( $item['links'] ) ) {
+							foreach ( $item['links'] as $childKey => $childItem ) {
+								$childId = $childItem['id'] ?? '';
+								if ( in_array( $childId, $hiddenIds, true ) ) {
+									continue;
+								}
+								echo $this->makeListItem( $childKey, $childItem );
+							}
+							continue;
+						}
+
+						$itemId = $item['id'] ?? '';
+						if ( in_array( $itemId, $hiddenIds, true ) ) {
+							continue;
+						}
+
+						echo $this->makeListItem( $key, $item );
+					}
+					?>
+				</ul>
+			</div>
+			<?php
+		}
 	}
 
 	/**
@@ -682,6 +774,10 @@ class LibertyTemplate extends BaseTemplate {
 								[ 'action' => 'delete' ]
 							); ?>
 						<?php } ?>
+						<div class="mobile-sidebar-portals">
+							<div class="dropdown-divider"></div>
+							<?php $this->sidebarPortals( true ); ?>
+						</div>
 					</div>
 				</div>
 			</div>

@@ -48,6 +48,38 @@
 		padding: 0.5rem;
 	}
 
+	.Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .mobile-sidebar-portals {
+		display: block;
+		text-align: left;
+	}
+
+	.Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .mobile-sidebar-portals .dropdown-header {
+		padding: 0.5rem 1rem 0.25rem;
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: #6e7478;
+	}
+
+	.Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .mobile-sidebar-portals .sidebar-portlet-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .mobile-sidebar-portals .sidebar-portlet-list li {
+		border-top: 1px solid #e1e8ed;
+	}
+
+	.Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .mobile-sidebar-portals .sidebar-portlet-list li a {
+		display: block;
+		padding: 0.45rem 1rem;
+		color: #373a3c;
+	}
+
+	.Liberty .content-wrapper .liberty-content .liberty-content-header .content-tools .mobile-sidebar-portals .sidebar-portlet-list li a:hover {
+		color: #111;
+	}
+
 	.Liberty .content-wrapper .liberty-content .liberty-content-header .title {
 		padding: 0.5rem;
 	}
